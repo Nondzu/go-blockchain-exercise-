@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
-	"github.com/web3coach/the-blockchain-bar/database"
 	"fmt"
 	"os"
+
+	"github.com/spf13/cobra"
+	"github.com/web3coach/the-blockchain-bar/database"
 )
 
 func balancesCmd() *cobra.Command {
@@ -34,7 +35,7 @@ var balancesListCmd = &cobra.Command{
 		}
 		defer state.Close()
 
-		fmt.Println("Accounts balances:")
+		fmt.Printf("Accounts balances at %x:\n", state.LatestSnapshot())
 		fmt.Println("__________________")
 		fmt.Println("")
 		for account, balance := range state.Balances {
