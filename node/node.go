@@ -31,7 +31,7 @@ type Node struct {
 
 	state *database.State
 
-	knownPeers map[string]PeerNode
+	knownPeers []PeerNode
 }
 
 func Run(dataDir string) error {
