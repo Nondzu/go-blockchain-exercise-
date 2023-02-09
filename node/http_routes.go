@@ -27,9 +27,9 @@ type TxAddRes struct {
 }
 
 type StatusRes struct {
-	Hash       database.Hash `json:"block_hash"`
-	Number     uint64        `json:"block_number"`
-	KnownPeers []PeerNode    `json:"peers_known"` // tell me your peers
+	Hash       database.Hash       `json:"block_hash"`
+	Number     uint64              `json:"block_number"`
+	KnownPeers map[string]PeerNode `json:"peers_known"` // tell me your peers
 }
 
 type SyncRes struct {
@@ -48,4 +48,24 @@ func statusHandler(w http.ResponseWriter, r *http.Request, n *Node) {
 		KnownPeers: n.knownPeers,
 	}
 	writeRes(w, res)
+}
+
+func syncHandler(w http.ResponseWriter, r *http.Request, node *Node) {
+	// What's your latest block?
+	// I will check my state, if I have newer blocks
+	reqHash := r.URL.Query().Get(endpointSyncQueryKeyFromBlock)
+	hash := database.Hash{}
+	err := hash.UnmarshalText([]byte(reqHash))
+	if err != nil {
+		writeErrRes(w, err)
+		return
+	}
+	// Read newer blocks from the DB
+	blocks, err := database.GetBlocksAfter(hash, node.dataDir)
+	if err != nil {
+		writeErrRes(w, err)
+		return
+	}
+	// JSON encode the blocks and return them in the response
+	writeRes(w, SyncRes{Blocks: blocks})
 }
