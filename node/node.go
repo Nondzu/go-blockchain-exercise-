@@ -1,33 +1,37 @@
 package node
 
 import (
-	"net/http"
-	"fmt"
-	"github.com/web3coach/the-blockchain-bar/database"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"net/http"
+
+	"github.com/web3coach/the-blockchain-bar/database"
 )
 
 const httpPort = 8080
 
-type ErrRes struct {
-	Error string `json:"error"`
+type PeerNode struct {
+	IP          string `json:"ip"`
+	Port        uint64 `json:"port"`
+	IsBootstrap bool   `json:"is_bootstrap"`
+
+	// Whenever my node already established connection, sync with this Peer
+	connected bool
 }
 
-type BalancesRes struct {
-	Hash     database.Hash             `json:"block_hash"`
-	Balances map[database.Account]uint `json:"balances"`
+func (pn PeerNode) TcpAddress() string {
+	return fmt.Sprintf("%s:%d", pn.IP, pn.Port)
 }
 
-type TxAddReq struct {
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Value uint   `json:"value"`
-	Data  string `json:"data"`
-}
+type Node struct {
+	dataDir string
+	ip      string
+	port    uint64
 
-type TxAddRes struct {
-	Hash     database.Hash `json:"block_hash"`
+	state *database.State
+
+	knownPeers map[string]PeerNode
 }
 
 func Run(dataDir string) error {
@@ -45,6 +49,10 @@ func Run(dataDir string) error {
 
 	http.HandleFunc("/tx/add", func(w http.ResponseWriter, r *http.Request) {
 		txAddHandler(w, r, state)
+	})
+
+	http.HandleFunc("/node/status", func(w http.ResponseWriter, r *http.Request) {
+		statusHandler(w, r, state)
 	})
 
 	return http.ListenAndServe(fmt.Sprintf(":%d", httpPort), nil)

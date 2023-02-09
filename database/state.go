@@ -58,12 +58,14 @@ func NewStateFromDisk(dataDir string) (*State, error) {
 			return nil, err
 		}
 
-		err = state.applyBlock(blockFs.Value)
+		err = applyTXs(blockFs.Value.TXs, state)
 		if err != nil {
 			return nil, err
 		}
 
+		state.latestBlock = blockFs.Value
 		state.latestBlockHash = blockFs.Key
+		state.hasGenesisBlock = true
 	}
 
 	return state, nil
