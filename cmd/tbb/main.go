@@ -1,10 +1,13 @@
 package main
 
 import (
-	"github.com/spf13/cobra"
-	"os"
 	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
 )
+
+const flagDataDir = "datadir"
 
 func main() {
 	var tbbCmd = &cobra.Command{
@@ -15,14 +18,24 @@ func main() {
 	}
 
 	tbbCmd.AddCommand(versionCmd)
+	tbbCmd.AddCommand(runCmd())
 	tbbCmd.AddCommand(balancesCmd())
-	tbbCmd.AddCommand(txCmd())
+	// tbbCmd.AddCommand(txCmd())
 
 	err := tbbCmd.Execute()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func addDefaultRequiredFlags(cmd *cobra.Command) {
+	cmd.Flags().String(
+		flagDataDir,
+		"",
+		"Absolute path where all data will/is stored",
+	)
+	cmd.MarkFlagRequired(flagDataDir)
 }
 
 func incorrectUsageErr() error {

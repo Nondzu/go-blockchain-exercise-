@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -17,13 +16,13 @@ type State struct {
 	latestBlockHash Hash
 }
 
-func NewStateFromDisk() (*State, error) {
-	cwd, err := os.Getwd()
+func NewStateFromDisk(dataDir string) (*State, error) {
+	err := initDataDirIfNotExists(dataDir)
 	if err != nil {
 		return nil, err
 	}
 
-	gen, err := loadGenesis(filepath.Join(cwd, "database", "genesis.json"))
+	gen, err := loadGenesis(getGenesisJsonFilePath(dataDir))
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +32,7 @@ func NewStateFromDisk() (*State, error) {
 		balances[account] = balance
 	}
 
-	f, err := os.OpenFile(filepath.Join(cwd, "database", "block.db"), os.O_APPEND|os.O_RDWR, 0600)
+	f, err := os.OpenFile(getBlocksDbFilePath(dataDir), os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +40,7 @@ func NewStateFromDisk() (*State, error) {
 	scanner := bufio.NewScanner(f)
 
 	state := &State{balances, make([]Tx, 0), f, Hash{}}
+
 	for scanner.Scan() {
 		if err := scanner.Err(); err != nil {
 			return nil, err
@@ -63,6 +63,53 @@ func NewStateFromDisk() (*State, error) {
 
 	return state, nil
 }
+
+// func NewStateFromDisk() (*State, error) {
+// 	cwd, err := os.Getwd()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	gen, err := loadGenesis(filepath.Join(cwd, "database", "genesis.json"))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	balances := make(map[Account]uint)
+// 	for account, balance := range gen.Balances {
+// 		balances[account] = balance
+// 	}
+
+// 	f, err := os.OpenFile(filepath.Join(cwd, "database", "block.db"), os.O_APPEND|os.O_RDWR, 0600)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	scanner := bufio.NewScanner(f)
+
+// 	state := &State{balances, make([]Tx, 0), f, Hash{}}
+// 	for scanner.Scan() {
+// 		if err := scanner.Err(); err != nil {
+// 			return nil, err
+// 		}
+
+// 		blockFsJson := scanner.Bytes()
+// 		var blockFs BlockFS
+// 		err = json.Unmarshal(blockFsJson, &blockFs)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		err = state.applyBlock(blockFs.Value)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		state.latestBlockHash = blockFs.Key
+// 	}
+
+// 	return state, nil
+// }
 
 func (s *State) LatestBlockHash() Hash {
 	return s.latestBlockHash
