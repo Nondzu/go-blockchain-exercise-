@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/web3coach/the-blockchain-bar/fs"
 )
 
 const flagDataDir = "datadir"
@@ -17,10 +18,10 @@ func main() {
 		},
 	}
 
+	tbbCmd.AddCommand(migrateCmd())
 	tbbCmd.AddCommand(versionCmd)
 	tbbCmd.AddCommand(runCmd())
 	tbbCmd.AddCommand(balancesCmd())
-	// tbbCmd.AddCommand(txCmd())
 
 	err := tbbCmd.Execute()
 	if err != nil {
@@ -40,4 +41,10 @@ func addDefaultRequiredFlags(cmd *cobra.Command) {
 
 func incorrectUsageErr() error {
 	return fmt.Errorf("incorrect usage")
+}
+
+func getDataDirFromCmd(cmd *cobra.Command) string {
+	dataDir, _ := cmd.Flags().GetString(flagDataDir)
+
+	return fs.ExpandPath(dataDir)
 }
