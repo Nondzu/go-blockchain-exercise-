@@ -27,9 +27,9 @@ type TxAddRes struct {
 }
 
 type StatusRes struct {
-	Hash       database.Hash       `json:"block_hash"`
-	Number     uint64              `json:"block_number"`
-	KnownPeers map[string]PeerNode `json:"peers_known"`
+	Hash       database.Hash `json:"block_hash"`
+	Number     uint64        `json:"block_number"`
+	KnownPeers []PeerNode    `json:"peers_known"` // tell me your peers
 }
 
 type SyncRes struct {
@@ -41,10 +41,11 @@ type AddPeerRes struct {
 	Error   string `json:"error"`
 }
 
-func statusHandler(w http.ResponseWriter, r *http.Request, state *database.State) {
+func statusHandler(w http.ResponseWriter, r *http.Request, n *Node) {
 	res := StatusRes{
-		Hash:   state.LatestBlockHash(),
-		Number: state.LatestBlock().Header.Number,
+		Hash:       n.state.LatestBlockHash(),
+		Number:     n.state.LatestBlock().Header.Number,
+		KnownPeers: n.knownPeers,
 	}
 	writeRes(w, res)
 }
