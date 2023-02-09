@@ -46,3 +46,7 @@ func (b Block) Hash() (Hash, error) {
 func NewBlock(parent Hash, number uint64, time uint64, txs []Tx) Block {
 	return Block{BlockHeader{parent, number, time}, txs}
 }
+
+func (h Hash) Hex() string {
+	return hex.EncodeToString(h[:])
+}

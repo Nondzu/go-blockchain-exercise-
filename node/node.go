@@ -23,10 +23,9 @@ type PeerNode struct {
 	IP          string `json:"ip"`
 	Port        uint64 `json:"port"`
 	IsBootstrap bool   `json:"is_bootstrap"`
-	IsActive    bool   `json:"is_active"`
 
 	// Whenever my node already established connection, sync with this Peer
-	// connected bool
+	connected bool
 }
 
 func (pn PeerNode) TcpAddress() string {
@@ -61,7 +60,7 @@ func NewPeerNode(ip string, port uint64, isBootstrap bool, connected bool) PeerN
 
 func (n *Node) Run() error {
 	ctx := context.Background()
-	fmt.Println(fmt.Sprintf("Listening on HTTP port: %d", DefaultHTTPort))
+	fmt.Println(fmt.Sprintf("Listening on HTTP port: %d", n.port))
 
 	state, err := database.NewStateFromDisk(n.dataDir)
 	if err != nil {
@@ -89,34 +88,27 @@ func (n *Node) Run() error {
 		syncHandler(w, r, n)
 	})
 
+	http.HandleFunc(endpointAddPeer, func(w http.ResponseWriter, r *http.Request) {
+		addPeerHandler(w, r, n)
+	})
+
 	return http.ListenAndServe(fmt.Sprintf(":%d", n.port), nil)
 }
 
-func listBalancesHandler(w http.ResponseWriter, r *http.Request, state *database.State) {
-	writeRes(w, BalancesRes{state.LatestBlockHash(), state.Balances})
+func (n *Node) AddPeer(peer PeerNode) {
+	n.knownPeers[peer.TcpAddress()] = peer
 }
 
-func txAddHandler(w http.ResponseWriter, r *http.Request, state *database.State) {
-	req := TxAddReq{}
-	err := readReq(r, &req)
-	if err != nil {
-		writeErrRes(w, err)
-		return
+func (n *Node) RemovePeer(peer PeerNode) {
+	delete(n.knownPeers, peer.TcpAddress())
+}
+
+func (n *Node) IsKnownPeer(peer PeerNode) bool {
+	if peer.IP == n.ip && peer.Port == n.port {
+		return true
 	}
 
-	tx := database.NewTx(database.NewAccount(req.From), database.NewAccount(req.To), req.Value, req.Data)
+	_, isKnownPeer := n.knownPeers[peer.TcpAddress()]
 
-	err = state.AddTx(tx)
-	if err != nil {
-		writeErrRes(w, err)
-		return
-	}
-
-	hash, err := state.Persist()
-	if err != nil {
-		writeErrRes(w, err)
-		return
-	}
-
-	writeRes(w, TxAddRes{hash})
+	return isKnownPeer
 }

@@ -1,7 +1,10 @@
 package node
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/web3coach/the-blockchain-bar/database"
 )
@@ -41,6 +44,36 @@ type AddPeerRes struct {
 	Error   string `json:"error"`
 }
 
+func listBalancesHandler(w http.ResponseWriter, r *http.Request, state *database.State) {
+	writeRes(w, BalancesRes{state.LatestBlockHash(), state.Balances})
+}
+
+func txAddHandler(w http.ResponseWriter, r *http.Request, state *database.State) {
+	req := TxAddReq{}
+	err := readReq(r, &req)
+	if err != nil {
+		writeErrRes(w, err)
+		return
+	}
+
+	tx := database.NewTx(database.NewAccount(req.From), database.NewAccount(req.To), req.Value, req.Data)
+
+	block := database.NewBlock(
+		state.LatestBlockHash(),
+		state.NextBlockNumber(),
+		uint64(time.Now().Unix()),
+		[]database.Tx{tx},
+	)
+
+	hash, err := state.AddBlock(block)
+	if err != nil {
+		writeErrRes(w, err)
+		return
+	}
+
+	writeRes(w, TxAddRes{hash})
+}
+
 func statusHandler(w http.ResponseWriter, r *http.Request, n *Node) {
 	res := StatusRes{
 		Hash:       n.state.LatestBlockHash(),
@@ -68,4 +101,23 @@ func syncHandler(w http.ResponseWriter, r *http.Request, node *Node) {
 	}
 	// JSON encode the blocks and return them in the response
 	writeRes(w, SyncRes{Blocks: blocks})
+}
+
+func addPeerHandler(w http.ResponseWriter, r *http.Request, node *Node) {
+	peerIP := r.URL.Query().Get(endpointAddPeerQueryKeyIP)
+	peerPortRaw := r.URL.Query().Get(endpointAddPeerQueryKeyPort)
+
+	peerPort, err := strconv.ParseUint(peerPortRaw, 10, 32)
+	if err != nil {
+		writeRes(w, AddPeerRes{false, err.Error()})
+		return
+	}
+
+	peer := NewPeerNode(peerIP, peerPort, false, true)
+
+	node.AddPeer(peer)
+
+	fmt.Printf("Peer '%s' was added into KnownPeers\n", peer.TcpAddress())
+
+	writeRes(w, AddPeerRes{true, ""})
 }

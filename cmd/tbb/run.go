@@ -22,7 +22,7 @@ func runCmd() *cobra.Command {
 				"127.0.0.1",
 				8080,
 				true,
-				true,
+				false,
 			)
 			n := node.New(getDataDirFromCmd(cmd), ip, port, bootstrap)
 			err := n.Run()

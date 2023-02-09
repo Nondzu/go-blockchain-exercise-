@@ -71,6 +71,17 @@ func NewStateFromDisk(dataDir string) (*State, error) {
 	return state, nil
 }
 
+func (s *State) AddBlocks(blocks []Block) error {
+	for _, b := range blocks {
+		_, err := s.AddBlock(b)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *State) AddBlock(b Block) (Hash, error) {
 
 	pendingState := s.copy()
@@ -121,16 +132,6 @@ func (s *State) LatestBlock() Block {
 func (s *State) LatestBlockHash() Hash {
 	return s.latestBlockHash
 }
-
-// func (s *State) AddBlock(b Block) error {
-// 	for _, tx := range b.TXs {
-// 		if err := s.AddTx(tx); err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	return nil
-// }
 
 func (s *State) AddTx(tx Tx) error {
 	if err := s.apply(tx); err != nil {
@@ -229,14 +230,17 @@ func (s *State) copy() State {
 
 // applyBlock verifies if block can be added to the blockchain.
 //
-// Block metadata are verified as well as transactions within (sufficient balances, etc).
+// Block metadata are verified as well as transactions within -
+// sufficient balances, etc.
 func applyBlock(b Block, s State) error {
 	nextExpectedBlockNumber := s.latestBlock.Header.Number + 1
 
+	// validate the next block number increases by 1
 	if s.hasGenesisBlock && b.Header.Number != nextExpectedBlockNumber {
 		return fmt.Errorf("next expected block must be '%d' not '%d'", nextExpectedBlockNumber, b.Header.Number)
 	}
 
+	// validate the incoming block parent hash equals the current (latest known) hash
 	if s.hasGenesisBlock && s.latestBlock.Header.Number > 0 && !reflect.DeepEqual(b.Header.Parent, s.latestBlockHash) {
 		return fmt.Errorf("next block parent hash must be '%x' not '%x'", s.latestBlockHash, b.Header.Parent)
 	}
